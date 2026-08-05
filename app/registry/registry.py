@@ -27,5 +27,23 @@ class ToolRegistry:
 
         return list(self._tools.values())
 
+    def tool_prompt(self) -> str:
+
+        prompt = "Available Functions:\n\n"
+
+        for tool in self._tools.values():
+
+            prompt += f"""
+    Function Name:
+    {tool['name']}
+
+    Description:
+    {tool['description']}
+
+    -------------------------
+    """
+
+        return prompt
+
 
 registry = ToolRegistry()

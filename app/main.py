@@ -1,22 +1,20 @@
-from registry.registry import registry
-
-# Import tools so they register themselves
-import tools.apps
+from llm.gemini import GeminiClient
 
 
 def main():
 
-    print()
+    gemini = GeminiClient()
 
-    print("Available Functions")
+    while True:
 
-    print("--------------------")
+        user_input = input("\nYou: ")
 
-    for tool in registry.list_tools():
+        if user_input.lower() == "exit":
+            break
 
-        print(tool["name"])
-        print(tool["description"])
-        print()
+        response = gemini.ask(user_input)
+
+        print(f"\nCharles: {response}")
 
 
 if __name__ == "__main__":
