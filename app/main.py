@@ -1,41 +1,41 @@
 from llm.gemini import GeminiClient
 from registry.registry import registry
+from voice.speaker import Speaker
 
-# Register all tools
 import tools.apps
 
 
 def main():
 
+    speaker = Speaker()
+
     gemini = GeminiClient()
+
+    speaker.speak("Hello. I am Charles.")
 
     while True:
 
         command = input("\nYou: ")
 
         if command.lower() == "exit":
+
+            speaker.speak("Goodbye.")
+
             break
 
         result = gemini.ask(command)
-        print(result)
 
         if result["type"] == "conversation":
 
-            print(f"\nCharles: {result['response']}")
+            speaker.speak(result["response"])
 
         elif result["type"] == "tool_call":
 
             tool = registry.get(result["tool"])
 
-            if tool is None:
-
-                print("\nCharles: I couldn't find that tool.")
-
-                continue
-
             tool_result = tool["function"](**result["arguments"])
 
-            print(f"\nCharles: {tool_result.message}")
+            speaker.speak(tool_result.message)
 
 
 if __name__ == "__main__":
