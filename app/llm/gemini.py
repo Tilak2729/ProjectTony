@@ -1,4 +1,5 @@
 import os
+import json
 
 from dotenv import load_dotenv
 from google import genai
@@ -18,7 +19,7 @@ class GeminiClient:
 
         self.client = genai.Client(api_key=api_key)
 
-    def ask(self, prompt: str) -> str:
+    def ask(self, prompt: str):
 
         with open("app/prompts/system_prompt.txt", "r", encoding="utf-8") as file:
             system_prompt = file.read()
@@ -38,4 +39,6 @@ class GeminiClient:
             contents=full_prompt
         )
 
-        return response.text
+        text = response.text.strip()
+
+        return json.loads(text)
