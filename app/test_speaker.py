@@ -3,7 +3,7 @@ from voice.speaker import Speaker
 
 speaker = Speaker()
 
-speaker.speak("Hello. I am Charles.")
+speaker.speak("Hello. I am tony.")
 
 speaker.speak("I can finally speak.")
 

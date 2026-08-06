@@ -4,7 +4,7 @@ from .tool_result import ToolResult
 
 class BaseTool(ABC):
     """
-    Every Charles tool must inherit from this class.
+    Every tony tool must inherit from this class.
     """
 
     @property

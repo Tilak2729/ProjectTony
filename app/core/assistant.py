@@ -1,17 +1,17 @@
 from voice.speaker import Speaker
 
 
-class Charles:
+class tony:
 
     def __init__(self):
         self.speaker = Speaker()
 
     def start(self):
         print("=" * 34)
-        print("       CHARLES AI ASSISTANT")
+        print("       tony AI ASSISTANT")
         print("=" * 34)
 
-        self.speaker.speak("Hello! I am Charles.")
+        self.speaker.speak("Hello! I am tony.")
         self.speaker.speak("Waiting for your command...")
 
         while True:
