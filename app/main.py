@@ -7,6 +7,7 @@ from voice.listener import Listener
 from voice.speaker import Speaker
 
 import tools.apps
+import tools.volume
 
 
 def main():
