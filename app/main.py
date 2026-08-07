@@ -44,26 +44,38 @@ def main():
             speaker.speak("Yes?")
             continue
 
-        result = gemini.ask(command)
+        try:
 
-        if result["type"] == "conversation":
+            print("\n🧠 Thinking...")
 
-            speaker.speak(result["response"])
+            result = gemini.ask(command)
 
-        elif result["type"] == "tool_call":
+            if result["type"] == "conversation":
 
-            tool = registry.get(result["tool"])
+                speaker.speak(result["response"])
 
-            if tool is None:
+            elif result["type"] == "tool_call":
 
-                speaker.speak("I don't know how to do that yet.")
+                tool = registry.get(result["tool"])
 
-                continue
+                if tool is None:
 
-            tool_result = tool["function"](**result["arguments"])
+                    speaker.speak("I don't know how to do that yet.")
+                    continue
 
-            speaker.speak(tool_result.message)
+                print(f"\n🛠 Executing: {result['tool']}")
 
+                tool_result = tool["function"](**result["arguments"])
+
+                speaker.speak(tool_result.message)
+
+        except Exception as e:
+
+            print(f"\n❌ ERROR: {e}")
+
+            speaker.speak(
+                "Sorry, something went wrong while processing your request."
+            )
 
 if __name__ == "__main__":
     main()

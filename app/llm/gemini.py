@@ -1,5 +1,7 @@
 import os
 import json
+import time
+from google.genai.errors import ServerError
 
 from dotenv import load_dotenv
 from google import genai
@@ -34,11 +36,26 @@ class GeminiClient:
     {prompt}
     """
 
-        response = self.client.models.generate_content(
-            model="gemini-3.6-flash",
-            contents=full_prompt
-        )
+        max_retries = 3
 
-        text = response.text.strip()
+        for attempt in range(max_retries):
 
-        return json.loads(text)
+            try:
+
+                response = self.client.models.generate_content(
+                    model="gemini-3.6-flash",
+                    contents=full_prompt
+                )
+
+                text = response.text.strip()
+
+                return json.loads(text)
+
+            except ServerError:
+
+                if attempt == max_retries - 1:
+                    raise
+
+                print(f"⚠️ Gemini unavailable. Retrying ({attempt + 1}/{max_retries})...")
+
+                time.sleep(2)
