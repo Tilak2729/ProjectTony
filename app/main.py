@@ -8,7 +8,7 @@ from voice.speaker import Speaker
 
 import tools.apps
 import tools.volume
-
+from agent.validator import ResponseValidator
 
 def main():
 
@@ -49,6 +49,13 @@ def main():
             print("\n🧠 Thinking...")
 
             result = gemini.ask(command)
+            if not ResponseValidator.validate(result):
+
+                speaker.speak(
+                    "I received an invalid response from my AI engine."
+                )
+
+                continue
 
             if result["type"] == "conversation":
 
