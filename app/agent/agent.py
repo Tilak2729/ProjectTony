@@ -1,7 +1,6 @@
 from core.constants import WAKE_WORD
-from core.logger import logger
-
 from agent.validator import ResponseValidator
+from agent.tool_executor import ToolExecutor
 
 
 class Agent:
@@ -11,11 +10,10 @@ class Agent:
         self.listener = listener
         self.speaker = speaker
         self.gemini = gemini
-        self.registry = registry
+
+        self.tool_executor = ToolExecutor(registry)
 
     def run(self):
-
-        logger.info("Tony agent started.")
 
         self.speaker.speak("Tony is ready.")
 
@@ -28,13 +26,9 @@ class Agent:
 
             print(f"\nYou: {text}")
 
-            logger.info(f"Transcript: {text}")
-
             if text.lower() == "exit":
 
                 self.speaker.speak("Goodbye.")
-
-                logger.info("Tony stopped.")
 
                 break
 
@@ -58,13 +52,9 @@ class Agent:
 
             print("\n🧠 Thinking...")
 
-            logger.info(f"Command: {command}")
-
             result = self.gemini.ask(command)
 
             if not ResponseValidator.validate(result):
-
-                logger.error(f"Invalid AI response: {result}")
 
                 self.speaker.speak(
                     "I received an invalid response from my AI engine."
@@ -74,7 +64,9 @@ class Agent:
 
             if result["type"] == "conversation":
 
-                self.speaker.speak(result["response"])
+                self.speaker.speak(
+                    result["response"]
+                )
 
                 return
 
@@ -82,37 +74,20 @@ class Agent:
 
                 tool_name = result["tool"]
 
-                tool = self.registry.get(tool_name)
-
-                if tool is None:
-
-                    logger.error(f"Unknown tool requested: {tool_name}")
-
-                    self.speaker.speak(
-                        "I don't know how to do that yet."
-                    )
-
-                    return
-
-                print(f"\n🛠 Executing: {tool_name}")
-
-                logger.info(f"Executing tool: {tool_name}")
-
-                tool_result = tool["function"](
-                    **result["arguments"]
+                print(
+                    f"\n🛠 Executing: {tool_name}"
                 )
 
-                logger.info(
-                    f"Tool result: {tool_result.message}"
+                tool_result = self.tool_executor.execute(
+                    tool_name,
+                    result["arguments"]
                 )
 
                 self.speaker.speak(
-                    tool_result.message
+                    tool_result["message"]
                 )
 
         except Exception as e:
-
-            logger.exception("Agent processing error")
 
             print(f"\n❌ ERROR: {e}")
 
