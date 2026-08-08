@@ -3,10 +3,11 @@ import os
 
 import numpy as np
 import sounddevice as sd
+import torch
 from scipy.io.wavfile import write
 
 from faster_whisper import WhisperModel
-from silero_vad import load_silero_vad, get_speech_timestamps
+from silero_vad import load_silero_vad
 
 
 class Listener:
@@ -27,57 +28,109 @@ class Listener:
 
         self.sample_rate = 16000
 
+        self.chunk_duration = 512 / self.sample_rate
+
+        self.chunk_size = 512
+
+        self.max_recording_seconds = 15
+
+        self.silence_duration = 0.8
+
+        self.speech_threshold = 0.5
+
         print("Voice system ready.")
 
     def listen(self):
 
-        print("\n🎤 Speak... (max 10 seconds)")
+        print("\n🎤 Listening...")
 
-        audio = sd.rec(
-            int(10 * self.sample_rate),
+        audio_chunks = []
+
+        speech_detected = False
+        silence_time = 0
+
+        max_chunks = int(
+            self.max_recording_seconds /
+            self.chunk_duration
+        )
+
+        with sd.InputStream(
             samplerate=self.sample_rate,
             channels=1,
-            dtype="float32"
-        )
+            dtype="float32",
+            blocksize=self.chunk_size
+        ) as stream:
 
-        sd.wait()
+            for _ in range(max_chunks):
 
-        audio = audio.flatten()
+                audio, _ = stream.read(
+                    self.chunk_size
+                )
 
-        speech = get_speech_timestamps(
-            audio,
-            self.vad,
-            sampling_rate=self.sample_rate
-        )
+                audio = audio.flatten()
 
-        if not speech:
+                audio_tensor = torch.from_numpy(audio)
+
+                speech_probability = self.vad(
+                    audio_tensor,
+                    self.sample_rate
+                )
+
+                is_speech = (
+                    speech_probability.detach().item() >=
+                    self.speech_threshold
+                )
+
+                if is_speech:
+
+                    speech_detected = True
+                    silence_time = 0
+
+                    audio_chunks.append(audio)
+
+                elif speech_detected:
+
+                    audio_chunks.append(audio)
+
+                    silence_time += self.chunk_duration
+
+                    if silence_time >= self.silence_duration:
+
+                        break
+
+        if not speech_detected:
+
             return ""
 
-        start = speech[0]["start"]
-        end = speech[-1]["end"]
+        audio = np.concatenate(audio_chunks)
 
-        audio = audio[start:end]
+        return self._transcribe(audio)
+
+    def _transcribe(self, audio):
 
         with tempfile.NamedTemporaryFile(
             suffix=".wav",
             delete=False
         ) as temp:
 
+            temp_path = temp.name
+
             write(
-                temp.name,
+                temp_path,
                 self.sample_rate,
                 (audio * 32767).astype(np.int16)
             )
 
-            temp_path = temp.name
-
         try:
 
-            segments, _ = self.whisper.transcribe(temp_path)
+            segments, _ = self.whisper.transcribe(
+                temp_path
+            )
 
             text = ""
 
             for segment in segments:
+
                 text += segment.text
 
             return text.strip()
@@ -85,4 +138,5 @@ class Listener:
         finally:
 
             if os.path.exists(temp_path):
+
                 os.remove(temp_path)

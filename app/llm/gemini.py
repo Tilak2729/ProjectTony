@@ -49,7 +49,17 @@ class GeminiClient:
 
                 text = response.text.strip()
 
-                return json.loads(text)
+                try:
+                    return json.loads(text)
+
+                except json.JSONDecodeError:
+
+                    print("⚠️ Gemini returned invalid JSON.")
+
+                    return {
+                        "type": "conversation",
+                        "response": "I couldn't understand the response from my AI engine."
+                    }
 
             except ServerError:
 
