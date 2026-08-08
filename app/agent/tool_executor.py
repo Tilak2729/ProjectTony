@@ -14,6 +14,13 @@ class ToolExecutor:
                 "message": f"Tool '{tool_name}' is not available."
             }
 
+        if not isinstance(arguments, dict):
+
+            return {
+                "success": False,
+                "message": "Invalid tool arguments."
+            }
+
         try:
 
             result = tool["function"](**arguments)
@@ -25,9 +32,11 @@ class ToolExecutor:
 
         except TypeError as e:
 
+            print(f"\n❌ Invalid tool arguments: {e}")
+
             return {
                 "success": False,
-                "message": "The tool received invalid arguments."
+                "message": "The requested action contained invalid arguments."
             }
 
         except Exception as e:
