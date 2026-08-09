@@ -1,3 +1,5 @@
+import re
+
 from core.constants import WAKE_WORD
 from agent.validator import ResponseValidator
 from agent.tool_executor import ToolExecutor
@@ -13,6 +15,14 @@ class Agent:
 
         self.tool_executor = ToolExecutor(registry)
 
+        self.shutdown_commands = {
+            "exit",
+            "quit",
+            "stop",
+            "shutdown",
+            "goodbye",
+        }
+
     def run(self):
 
         self.speaker.speak("Tony is ready.")
@@ -26,25 +36,69 @@ class Agent:
 
             print(f"\nYou: {text}")
 
-            if text.lower() == "exit":
+            normalized_text = self.normalize(text)
 
-                self.speaker.speak("Goodbye.")
+            # Direct shutdown command
+            if normalized_text in self.shutdown_commands:
 
+                self.shutdown()
                 break
 
-            if not text.lower().startswith(WAKE_WORD):
+            # Ignore speech without the wake word
+            if not normalized_text.startswith(WAKE_WORD):
 
                 continue
 
-            command = text[len(WAKE_WORD):].strip(" ,")
+            # Remove wake word
+            command = normalized_text[
+                len(WAKE_WORD):
+            ].strip()
+
+            # Remove punctuation around the command
+            command = command.strip(
+                " ,.!?;:"
+            )
+
+            # Check shutdown BEFORE Gemini
+            if command in self.shutdown_commands:
+
+                self.shutdown()
+                break
 
             if not command:
 
                 self.speaker.speak("Yes?")
-
                 continue
 
             self.process_command(command)
+
+    def normalize(self, text):
+
+        text = text.lower().strip()
+
+        # Remove punctuation at the beginning/end
+        text = re.sub(
+            r"^[^\w]+|[^\w]+$",
+            "",
+            text
+        )
+
+        # Normalize multiple spaces
+        text = re.sub(
+            r"\s+",
+            " ",
+            text
+        )
+
+        return text
+
+    def shutdown(self):
+
+        print("\n🛑 Shutting down Tony...")
+
+        self.speaker.speak(
+            "Goodbye."
+        )
 
     def process_command(self, command):
 
