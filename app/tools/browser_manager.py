@@ -106,21 +106,21 @@ class BrowserManager:
 
         return elements
 
-    def click_element(self, element_id):
+    def _get_visible_elements(self):
 
         self.start()
 
-        elements = self.page.locator(
+        locator = self.page.locator(
             "a, button, input, textarea, select"
         )
 
         visible_elements = []
 
-        count = elements.count()
+        count = locator.count()
 
         for i in range(count):
 
-            element = elements.nth(i)
+            element = locator.nth(i)
 
             try:
 
@@ -134,6 +134,14 @@ class BrowserManager:
 
                 continue
 
+        return visible_elements
+
+    def click_element(self, element_id):
+
+        visible_elements = (
+            self._get_visible_elements()
+        )
+
         if (
             element_id < 0
             or element_id >= len(visible_elements)
@@ -146,6 +154,56 @@ class BrowserManager:
         visible_elements[
             element_id
         ].click()
+
+    def type_text(
+        self,
+        element_id,
+        text
+    ):
+
+        visible_elements = (
+            self._get_visible_elements()
+        )
+
+        if (
+            element_id < 0
+            or element_id >= len(visible_elements)
+        ):
+
+            raise ValueError(
+                "Invalid element ID."
+            )
+
+        element = visible_elements[
+            element_id
+        ]
+
+        element.fill(text)
+
+    def press_key(
+        self,
+        element_id,
+        key
+    ):
+
+        visible_elements = (
+            self._get_visible_elements()
+        )
+
+        if (
+            element_id < 0
+            or element_id >= len(visible_elements)
+        ):
+
+            raise ValueError(
+                "Invalid element ID."
+            )
+
+        element = visible_elements[
+            element_id
+        ]
+
+        element.press(key)
 
     def close(self):
 

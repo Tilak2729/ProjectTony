@@ -17,6 +17,8 @@ Actions:
 - read_page: Read visible webpage text.
 - get_elements: Get numbered interactive webpage elements.
 - click: Click an interactive webpage element by ID.
+- type: Type text into an interactive element by ID.
+- press: Press a keyboard key on an interactive element by ID.
 - close: Close the browser.
 
 Parameters:
@@ -24,13 +26,17 @@ action (string)
 url (string, optional)
 query (string, optional)
 element_id (integer, optional)
+text (string, optional)
+key (string, optional)
 """
 )
 def browser(
     action: str,
     url: str = None,
     query: str = None,
-    element_id: int = None
+    element_id: int = None,
+    text: str = None,
+    key: str = None
 ) -> ToolResult:
 
     try:
@@ -75,9 +81,12 @@ def browser(
 
         if action == "read_page":
 
-            text = browser_manager.get_page_text()
+            page_text = (
+                browser_manager
+                .get_page_text()
+            )
 
-            if not text:
+            if not page_text:
 
                 return ToolResult(
                     False,
@@ -86,7 +95,7 @@ def browser(
 
             return ToolResult(
                 True,
-                text[:12000]
+                page_text[:12000]
             )
 
         if action == "get_elements":
@@ -131,6 +140,58 @@ def browser(
             return ToolResult(
                 True,
                 f"Clicked element {element_id}."
+            )
+
+        if action == "type":
+
+            if element_id is None:
+
+                return ToolResult(
+                    False,
+                    "No element ID was provided."
+                )
+
+            if text is None:
+
+                return ToolResult(
+                    False,
+                    "No text was provided."
+                )
+
+            browser_manager.type_text(
+                element_id,
+                text
+            )
+
+            return ToolResult(
+                True,
+                f"Typed text into element {element_id}."
+            )
+
+        if action == "press":
+
+            if element_id is None:
+
+                return ToolResult(
+                    False,
+                    "No element ID was provided."
+                )
+
+            if not key:
+
+                return ToolResult(
+                    False,
+                    "No key was provided."
+                )
+
+            browser_manager.press_key(
+                element_id,
+                key
+            )
+
+            return ToolResult(
+                True,
+                f"Pressed {key} on element {element_id}."
             )
 
         if action == "close":
