@@ -8,6 +8,7 @@ from agent.agent import Agent
 
 import tools.apps
 import tools.volume
+import tools.browser
 
 
 def main():
