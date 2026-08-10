@@ -11,6 +11,7 @@ import tools.volume
 import tools.browser
 import tools.system
 import tools.brightness
+import tools.wifi
 
 
 def main():
