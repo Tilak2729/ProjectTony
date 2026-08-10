@@ -10,6 +10,7 @@ import tools.apps
 import tools.volume
 import tools.browser
 import tools.system
+import tools.brightness
 
 
 def main():
