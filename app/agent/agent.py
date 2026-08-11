@@ -316,12 +316,25 @@ class Agent:
                         "the selected item"
                     )
 
+                    try:
+                        from tools.files import resolve_path
+
+                        resolved_path = resolve_path(path)
+
+                        display_path = str(
+                            resolved_path
+                        )
+
+                    except Exception:
+
+                        display_path = path
+
                     self.request_confirmation(
                         tool_name,
                         arguments,
                         (
                             f"This will permanently delete "
-                            f"{path}. "
+                            f"{display_path}. "
                             f"Do you want me to continue?"
                         )
                     )
