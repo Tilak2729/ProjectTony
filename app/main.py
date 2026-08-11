@@ -13,6 +13,7 @@ import tools.system
 import tools.brightness
 import tools.wifi
 import tools.files
+import tools.terminal
 
 
 def main():
