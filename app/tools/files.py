@@ -35,47 +35,133 @@ KNOWN_FOLDERS = {
         else HOME / "Documents"
     ),
 }
+def find_child(parent: Path, name: str) -> Path:
+
+    # Exact match first.
+    exact = parent / name
+
+    if exact.exists():
+
+        return exact
+
+    target_name = (
+        name
+        .replace(" ", "")
+        .lower()
+    )
+
+    matches = []
+
+    for item in parent.iterdir():
+
+        actual_name = (
+            item.name
+            .replace(" ", "")
+            .lower()
+        )
+
+        if actual_name == target_name:
+
+            matches.append(item)
+
+    if len(matches) == 1:
+
+        return matches[0]
+
+    if len(matches) > 1:
+
+        raise ValueError(
+            f"Multiple items matching '{name}' "
+            f"were found in {parent}."
+        )
+
+    # Return the expected path so the caller
+    # can produce the normal "does not exist" message.
+    return parent / name
 
 
 def resolve_path(path: str) -> Path:
 
     path = path.strip()
 
-    # Known special folders
-    if path.lower() in KNOWN_FOLDERS:
+    if not path:
+        return Path()
 
-        return KNOWN_FOLDERS[path.lower()]
+    # Normalize separators.
+    normalized = path.replace("\\", "/")
+
+    # Remove leading ./ if present.
+    normalized = normalized.removeprefix("./")
+
+    parts = [
+        part.strip()
+        for part in normalized.split("/")
+        if part.strip()
+    ]
+
+    if not parts:
+        return Path()
+
+    first_part = parts[0].lower()
+
+    # ---------------------------------------------------------
+    # Known Windows folders
+    # ---------------------------------------------------------
+
+    if first_part in KNOWN_FOLDERS:
+
+        current = KNOWN_FOLDERS[first_part]
+
+        remaining_parts = parts[1:]
+
+        for part in remaining_parts:
+
+            current = find_child(
+                current,
+                part
+            )
+
+        return current
+
+    # ---------------------------------------------------------
+    # Direct path
+    # ---------------------------------------------------------
 
     requested = Path(path).expanduser()
 
-    # Exact path already exists
     if requested.exists():
 
         return requested
 
-    # Try resolving the path relative to the current directory
+    # ---------------------------------------------------------
+    # Try relative to current working directory
+    # ---------------------------------------------------------
+
     current_path = Path.cwd() / requested
 
     if current_path.exists():
 
         return current_path
 
-    # Normalize the spoken name:
-    # "Tony Test" -> "tonytest"
+    # ---------------------------------------------------------
+    # Search ONLY direct children of known folders.
+    #
+    # We deliberately do NOT use rglob here.
+    # ---------------------------------------------------------
+
     target_name = (
         requested.name
         .replace(" ", "")
         .lower()
     )
 
-    # Search common user folders
+    matches = []
+
     for base_folder in KNOWN_FOLDERS.values():
 
         if not base_folder.exists():
-
             continue
 
-        # First check direct children
         for item in base_folder.iterdir():
 
             actual_name = (
@@ -86,28 +172,19 @@ def resolve_path(path: str) -> Path:
 
             if actual_name == target_name:
 
-                return item
+                matches.append(item)
 
-        # Then search one level deeper
-        try:
+    if len(matches) == 1:
 
-            for item in base_folder.rglob("*"):
+        return matches[0]
 
-                actual_name = (
-                    item.name
-                    .replace(" ", "")
-                    .lower()
-                )
+    if len(matches) > 1:
 
-                if actual_name == target_name:
+        raise ValueError(
+            f"Multiple items named '{path}' were found. "
+            "Please specify the folder."
+        )
 
-                    return item
-
-        except Exception:
-
-            continue
-
-    # Return original path if nothing matched
     return requested
 
 
