@@ -1,5 +1,6 @@
 import tempfile
 import os
+from collections import deque
 
 import numpy as np
 import sounddevice as sd
@@ -28,15 +29,30 @@ class Listener:
 
         self.sample_rate = 16000
 
-        self.chunk_duration = 512 / self.sample_rate
-
+        # Silero VAD at 16 kHz expects 512 samples
         self.chunk_size = 512
+
+        self.chunk_duration = (
+            self.chunk_size / self.sample_rate
+        )
 
         self.max_recording_seconds = 15
 
         self.silence_duration = 0.8
 
         self.speech_threshold = 0.5
+
+        # Keep a small amount of audio before speech
+        # is detected so the first word is not clipped.
+        self.pre_roll_duration = 0.35
+
+        self.pre_roll_chunks = max(
+            1,
+            int(
+                self.pre_roll_duration /
+                self.chunk_duration
+            )
+        )
 
         print("Voice system ready.")
 
@@ -45,6 +61,12 @@ class Listener:
         print("\n🎤 Listening...")
 
         audio_chunks = []
+
+        # Rolling buffer containing audio immediately
+        # before speech detection.
+        pre_roll = deque(
+            maxlen=self.pre_roll_chunks
+        )
 
         speech_detected = False
         silence_time = 0
@@ -69,7 +91,9 @@ class Listener:
 
                 audio = audio.flatten()
 
-                audio_tensor = torch.from_numpy(audio)
+                audio_tensor = torch.from_numpy(
+                    audio
+                )
 
                 speech_probability = self.vad(
                     audio_tensor,
@@ -77,11 +101,19 @@ class Listener:
                 )
 
                 is_speech = (
-                    speech_probability.detach().item() >=
-                    self.speech_threshold
+                    speech_probability.detach().item()
+                    >= self.speech_threshold
                 )
 
                 if is_speech:
+
+                    if not speech_detected:
+
+                        # Include audio immediately before
+                        # speech was detected.
+                        audio_chunks.extend(
+                            list(pre_roll)
+                        )
 
                     speech_detected = True
                     silence_time = 0
@@ -92,17 +124,31 @@ class Listener:
 
                     audio_chunks.append(audio)
 
-                    silence_time += self.chunk_duration
+                    silence_time += (
+                        self.chunk_duration
+                    )
 
-                    if silence_time >= self.silence_duration:
+                    if (
+                        silence_time
+                        >= self.silence_duration
+                    ):
 
                         break
+
+                else:
+
+                    # No speech yet. Keep recent audio
+                    # so the beginning of the sentence
+                    # is preserved.
+                    pre_roll.append(audio)
 
         if not speech_detected:
 
             return ""
 
-        audio = np.concatenate(audio_chunks)
+        audio = np.concatenate(
+            audio_chunks
+        )
 
         return self._transcribe(audio)
 
@@ -118,7 +164,9 @@ class Listener:
             write(
                 temp_path,
                 self.sample_rate,
-                (audio * 32767).astype(np.int16)
+                (audio * 32767).astype(
+                    np.int16
+                )
             )
 
         try:
