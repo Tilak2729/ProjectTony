@@ -317,6 +317,7 @@ class Agent:
                     )
 
                     try:
+
                         from tools.files import resolve_path
 
                         resolved_path = resolve_path(path)
@@ -340,6 +341,62 @@ class Agent:
                     )
 
                     return
+
+
+                if tool_name == "terminal":
+
+                    command = arguments.get(
+                        "command",
+                        ""
+                    )
+
+                    try:
+
+                        from tools.terminal import classify_command
+
+                        classification = classify_command(
+                            command
+                        )
+
+                    except Exception:
+
+                        classification = "confirmation"
+
+                    if classification == "blocked":
+
+                        self.speaker.speak(
+                            "I cannot execute that terminal command."
+                        )
+
+                        return
+
+                    if classification == "confirmation":
+
+                        working_directory = arguments.get(
+                            "working_directory"
+                        )
+
+                        confirmation_message = (
+                            f"I need your confirmation before "
+                            f"I execute this terminal command: "
+                            f"{command}"
+                        )
+
+                        if working_directory:
+
+                            confirmation_message += (
+                                f" in {working_directory}"
+                            )
+
+                        confirmation_message += ". Do you want me to continue?"
+
+                        self.request_confirmation(
+                            tool_name,
+                            arguments,
+                            confirmation_message
+                        )
+
+                        return
 
                 # -------------------------------------------------
                 # NORMAL TOOL EXECUTION
