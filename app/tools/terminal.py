@@ -2,6 +2,7 @@ import subprocess
 
 from registry.decorators import tool
 from tools.tool_result import ToolResult
+from tools.context import context
 
 
 # Commands Tony can execute without confirmation.
@@ -135,7 +136,11 @@ def terminal(
                 "-Command",
                 command
             ],
-            cwd=working_directory,
+            cwd=(
+                working_directory
+                if working_directory
+                else str(context.get_directory())
+            ),
             capture_output=True,
             text=True,
             timeout=60
