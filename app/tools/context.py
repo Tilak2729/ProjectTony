@@ -8,6 +8,66 @@ from core.context import TonyContext
 context = TonyContext()
 
 
+PROJECT_LOCATIONS = [
+    Path.home() / "Projects",
+    Path.home() / "Desktop",
+    Path.home() / "Documents",
+    Path.home() / "OneDrive" / "Documents",
+    Path.home() / "OneDrive" / "Desktop",
+    Path("C:/Projects"),
+]
+
+
+def find_project(project_name: str):
+
+    project_name = (
+        project_name
+        .strip()
+        .replace(" ", "")
+        .lower()
+    )
+
+    matches = []
+
+    for base in PROJECT_LOCATIONS:
+
+        if not base.exists():
+            continue
+
+        try:
+
+            for item in base.iterdir():
+
+                if not item.is_dir():
+                    continue
+
+                item_name = (
+                    item.name
+                    .replace(" ", "")
+                    .lower()
+                )
+
+                if item_name == project_name:
+
+                    matches.append(item)
+
+        except PermissionError:
+
+            continue
+
+    if len(matches) == 1:
+
+        return matches[0]
+
+    if len(matches) > 1:
+
+        raise ValueError(
+            f"Multiple projects named '{project_name}' were found."
+        )
+
+    return None
+
+
 @tool(
     name="working_directory",
     description="""
@@ -18,6 +78,10 @@ Actions:
 - get: Get the current working directory.
 - project: Set the current project directory.
 - clear_project: Forget the current project.
+
+The project action can accept either:
+- An absolute path
+- A project name such as ProjectTony
 
 Parameters:
 action (string)
@@ -69,11 +133,32 @@ def working_directory(
 
                 return ToolResult(
                     False,
-                    "Please specify the project directory."
+                    "Please specify the project name or directory."
                 )
 
-            success, result = context.set_project(
+            requested_path = Path(
                 path
+            ).expanduser()
+
+            # Absolute/existing path
+            if requested_path.exists():
+
+                project_path = requested_path.resolve()
+
+            else:
+
+                # Try project-name discovery
+                project_path = find_project(path)
+
+                if project_path is None:
+
+                    return ToolResult(
+                        False,
+                        f"I could not find the project '{path}'."
+                    )
+
+            success, result = context.set_project(
+                project_path
             )
 
             if not success:
