@@ -3,6 +3,7 @@ import re
 from core.constants import WAKE_WORD
 from agent.validator import ResponseValidator
 from agent.tool_executor import ToolExecutor
+from tools.context import context
 
 
 class Agent:
@@ -278,8 +279,12 @@ class Agent:
         try:
 
             print("\n🧠 Thinking...")
+            context.add_message(
+                "user",
+                command
+            )
 
-            result = self.gemini.ask(command)
+            result = self.gemini.ask(command, context)
 
             if not ResponseValidator.validate(result):
 
@@ -291,8 +296,21 @@ class Agent:
 
             if result["type"] == "conversation":
 
+                response = result["response"]
+
+                context.add_message(
+                    "assistant",
+                    response
+                )
+
+                context.set_last_action(
+                    command,
+                    tool=None,
+                    result=response
+                )
+
                 self.speaker.speak(
-                    result["response"]
+                    response
                 )
 
                 return
@@ -409,6 +427,17 @@ class Agent:
                 tool_result = self.tool_executor.execute(
                     tool_name,
                     arguments
+                )
+
+                context.add_message(
+                    "assistant",
+                    tool_result["message"]
+                )
+
+                context.set_last_action(
+                    command,
+                    tool=tool_name,
+                    result=tool_result["message"]
                 )
 
                 self.speaker.speak(

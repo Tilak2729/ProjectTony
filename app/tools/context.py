@@ -1,199 +1,129 @@
 from pathlib import Path
 
-from registry.decorators import tool
-from tools.tool_result import ToolResult
-from core.context import TonyContext
 
+class TonyContext:
 
-context = TonyContext()
+    def __init__(self):
 
+        self.current_directory = Path.cwd()
+        self.current_project = None
 
-PROJECT_LOCATIONS = [
-    Path.home() / "Projects",
-    Path.home() / "Desktop",
-    Path.home() / "Documents",
-    Path.home() / "OneDrive" / "Documents",
-    Path.home() / "OneDrive" / "Desktop",
-    Path("C:/Projects"),
-]
+        # Short-term conversation state
+        self.last_command = None
+        self.last_tool = None
+        self.last_result = None
 
+        self.conversation = []
 
-def find_project(project_name: str):
+        # Keep only recent interactions
+        self.max_history = 10
 
-    project_name = (
-        project_name
-        .strip()
-        .replace(" ", "")
-        .lower()
-    )
+    # ---------------------------------------------------------
+    # DIRECTORY
+    # ---------------------------------------------------------
 
-    matches = []
+    def set_directory(self, path):
 
-    for base in PROJECT_LOCATIONS:
+        path = Path(path).expanduser().resolve()
 
-        if not base.exists():
-            continue
+        if not path.exists():
 
-        try:
+            return False, f"{path} does not exist."
 
-            for item in base.iterdir():
+        if not path.is_dir():
 
-                if not item.is_dir():
-                    continue
+            return False, f"{path} is not a directory."
 
-                item_name = (
-                    item.name
-                    .replace(" ", "")
-                    .lower()
-                )
+        self.current_directory = path
 
-                if item_name == project_name:
+        return True, path
 
-                    matches.append(item)
+    def get_directory(self):
 
-        except PermissionError:
+        return self.current_directory
 
-            continue
+    # ---------------------------------------------------------
+    # PROJECT
+    # ---------------------------------------------------------
 
-    if len(matches) == 1:
+    def set_project(self, path):
 
-        return matches[0]
+        path = Path(path).expanduser().resolve()
 
-    if len(matches) > 1:
+        if not path.exists():
 
-        raise ValueError(
-            f"Multiple projects named '{project_name}' were found."
+            return False, f"{path} does not exist."
+
+        if not path.is_dir():
+
+            return False, f"{path} is not a directory."
+
+        self.current_project = path
+        self.current_directory = path
+
+        return True, path
+
+    def get_project(self):
+
+        return self.current_project
+
+    def clear_project(self):
+
+        self.current_project = None
+
+    # ---------------------------------------------------------
+    # CONVERSATION
+    # ---------------------------------------------------------
+
+    def add_message(
+        self,
+        role,
+        content
+    ):
+
+        self.conversation.append(
+            {
+                "role": role,
+                "content": content
+            }
         )
 
-    return None
+        # Keep only the most recent messages
+        if len(self.conversation) > self.max_history:
 
-
-@tool(
-    name="working_directory",
-    description="""
-Manage Tony's current working directory.
-
-Actions:
-- set: Change the current working directory.
-- get: Get the current working directory.
-- project: Set the current project directory.
-- clear_project: Forget the current project.
-
-The project action can accept either:
-- An absolute path
-- A project name such as ProjectTony
-
-Parameters:
-action (string)
-path (string, optional)
-"""
-)
-def working_directory(
-    action: str,
-    path: str = None
-) -> ToolResult:
-
-    try:
-
-        if action == "get":
-
-            return ToolResult(
-                True,
-                f"Current directory is {context.get_directory()}."
+            self.conversation = (
+                self.conversation[
+                    -self.max_history:
+                ]
             )
 
-        if action == "set":
+    def get_history(self):
 
-            if not path:
+        return self.conversation.copy()
 
-                return ToolResult(
-                    False,
-                    "Please specify the directory."
-                )
+    def clear_history(self):
 
-            success, result = context.set_directory(
-                path
-            )
+        self.conversation.clear()
 
-            if not success:
+    # ---------------------------------------------------------
+    # LAST ACTION
+    # ---------------------------------------------------------
 
-                return ToolResult(
-                    False,
-                    result
-                )
+    def set_last_action(
+        self,
+        command,
+        tool=None,
+        result=None
+    ):
 
-            return ToolResult(
-                True,
-                f"Working directory changed to {result}."
-            )
+        self.last_command = command
+        self.last_tool = tool
+        self.last_result = result
 
-        if action == "project":
+    def get_last_action(self):
 
-            if not path:
-
-                return ToolResult(
-                    False,
-                    "Please specify the project name or directory."
-                )
-
-            requested_path = Path(
-                path
-            ).expanduser()
-
-            # Absolute/existing path
-            if requested_path.exists():
-
-                project_path = requested_path.resolve()
-
-            else:
-
-                # Try project-name discovery
-                project_path = find_project(path)
-
-                if project_path is None:
-
-                    return ToolResult(
-                        False,
-                        f"I could not find the project '{path}'."
-                    )
-
-            success, result = context.set_project(
-                project_path
-            )
-
-            if not success:
-
-                return ToolResult(
-                    False,
-                    result
-                )
-
-            return ToolResult(
-                True,
-                f"Current project is now {result}."
-            )
-
-        if action == "clear_project":
-
-            context.clear_project()
-
-            return ToolResult(
-                True,
-                "Current project cleared."
-            )
-
-        return ToolResult(
-            False,
-            "Unsupported working directory action."
-        )
-
-    except Exception as e:
-
-        print(
-            f"Context error: {e}"
-        )
-
-        return ToolResult(
-            False,
-            "I could not change the working directory."
-        )
+        return {
+            "command": self.last_command,
+            "tool": self.last_tool,
+            "result": self.last_result
+        }
