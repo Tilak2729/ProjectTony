@@ -1,8 +1,8 @@
 # 🤖 Tony AI Assistant
 
-Tony is a **voice-controlled AI desktop assistant for Windows** that can understand natural-language commands and interact with the computer through a modular tool-based architecture.
+Tony is a **voice-controlled AI desktop assistant for Windows** that understands natural-language commands and interacts with the computer through a modular tool-based architecture.
 
-The goal is to evolve Tony from a simple voice assistant into a **safe, agentic desktop assistant** capable of planning and executing multi-step tasks.
+The goal is to evolve Tony from a simple voice assistant into a **safe, context-aware, agentic desktop assistant** capable of planning and executing multi-step tasks.
 
 ## ✨ Features
 
@@ -11,6 +11,7 @@ The goal is to evolve Tony from a simple voice assistant into a **safe, agentic 
 * Speech-to-text with **Faster-Whisper**
 * Voice activity detection with **Silero VAD**
 * Text-to-speech with **Piper**
+* Voice pre-roll to reduce first-word clipping
 * Natural wake-word detection
 * Wake word can appear anywhere in a sentence
 * Voice-based shutdown
@@ -21,7 +22,9 @@ The goal is to evolve Tony from a simple voice assistant into a **safe, agentic 
 * Tool-based command execution
 * Modular tool registry
 * Response validation
-* Short-term pending-action state for confirmations
+* Short-term conversation memory
+* Current project and working-directory context
+* Pending-action state for confirmations
 
 ### 🖥️ System Control
 
@@ -61,20 +64,86 @@ Built with **Playwright**.
 * Move files
 * Rename files and folders
 * Delete files with confirmation
+* Case-insensitive file/folder resolution
+* Speech-friendly name matching
 * OneDrive-aware Windows path resolution
 
 ### 💻 Terminal
 
-Initial PowerShell integration with a restricted set of safe commands such as:
+Tony has a PowerShell-based terminal tool with command safety classification.
+
+Commands are divided into:
+
+```text
+SAFE
+  ↓
+Execute automatically
+
+REQUIRES CONFIRMATION
+  ↓
+Ask the user before execution
+
+BLOCKED
+  ↓
+Never execute
+```
+
+Currently supports development commands such as:
 
 ```text
 python --version
 node --version
+npm --version
 git --version
 git status
+git branch
+git log
 ```
 
-Dangerous or unapproved commands are blocked until the confirmation system is extended.
+The terminal also supports a configurable **working directory**, allowing commands to run inside the currently selected project.
+
+### 📂 Project & Context Awareness
+
+Tony can maintain a current project and working directory.
+
+For example:
+
+```text
+Tony, go to ProjectTony.
+
+Tony, run git status.
+```
+
+Tony remembers that the terminal command should run inside:
+
+```text
+C:\Projects\ProjectTony
+```
+
+Tony can also discover projects by name from common Windows locations instead of always requiring an absolute path.
+
+### 🧠 Short-Term Memory
+
+Tony maintains temporary conversational context including:
+
+* Recent conversation
+* Current project
+* Current working directory
+* Last command
+* Last tool used
+* Last tool result
+
+This allows commands such as:
+
+```text
+Tony, go to ProjectTony.
+
+What is my current project?
+
+Run git status there.
+```
+
+The current memory exists only while Tony is running and is not yet persistent.
 
 ---
 
@@ -89,6 +158,8 @@ Dangerous or unapproved commands are blocked until the confirmation system is ex
                      ↓
                Tony Agent
                      ↓
+              Context / Memory
+                     ↓
                   Gemini
                      ↓
               Tool Selection
@@ -100,9 +171,14 @@ Dangerous or unapproved commands are blocked until the confirmation system is ex
    System         Browser         Files
       ↓              ↓              ↓
    Windows        Playwright      Windows
+
+                     ↓
+                 Terminal
+                     ↓
+                PowerShell
 ```
 
-Tony uses a **tool registry**, allowing new capabilities to be added independently without modifying the core agent.
+Tony uses a **central tool registry**, allowing new capabilities to be added independently without modifying the core agent.
 
 ---
 
@@ -144,7 +220,15 @@ User → Yes
 Tony → Execute
 ```
 
-This system will eventually be extended to terminal commands and other high-impact operations.
+The same confirmation mechanism is also being integrated with higher-risk terminal operations.
+
+Terminal commands are classified as:
+
+```text
+Safe          → Execute
+Confirmation  → Ask user
+Blocked       → Reject
+```
 
 ---
 
@@ -188,7 +272,9 @@ Hey Tony, decrease the volume.
 
 Tony, what's my battery level?
 
-Tony, open Google.
+Tony, go to ProjectTony.
+
+Tony, run git status.
 ```
 
 ---
@@ -196,17 +282,23 @@ Tony, open Google.
 ## 🗺️ Roadmap
 
 * [x] Voice input/output
+* [x] Whisper + Silero VAD
+* [x] Piper voice output
 * [x] Gemini integration
 * [x] Tool registry
 * [x] System controls
 * [x] Application control
 * [x] Browser automation
 * [x] File management
-* [x] Confirmation system
-* [x] Basic terminal integration
-* [ ] Advanced terminal agent
-* [ ] Persistent memory
+* [x] File operation confirmation
+* [x] Terminal integration
+* [x] Terminal safety classification
+* [x] Project discovery
+* [x] Working-directory awareness
+* [x] Short-term conversation memory
 * [ ] Multi-step task planning
+* [ ] Persistent memory
+* [ ] Advanced terminal agent
 * [ ] Improved browser agent
 * [ ] Windows startup integration
 * [ ] System tray application
@@ -218,4 +310,4 @@ Tony, open Google.
 
 > **Build a reliable, safe and intelligent AI agent that can operate a Windows computer through natural language.**
 
-Tony is currently an active development project, with the architecture being gradually expanded from individual commands toward autonomous multi-step task execution.
+Tony is an active development project. The architecture is gradually evolving from **individual command execution → context-aware interaction → autonomous multi-step task execution**.
